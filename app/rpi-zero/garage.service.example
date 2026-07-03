@@ -1,0 +1,13 @@
+[Unit]
+Description=Garage Door API
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/waitress-serve --host=0.0.0.0 --port=8000 main:app
+WorkingDirectory=/home/rpi-zero/Documents/Garag.io
+Restart=always
+RestartSec=5
+User=rpi-zero
+
+[Install]
+WantedBy=multi-user.target

@@ -30,7 +30,7 @@ Relay → Glidermatic GTS
 app/
 ├── rpi-zero/
 │   ├── main.py          # Pi Flask API (GPIO control)
-│   └── .env.example
+│   └── .env.example + garage.service.example
 └── web/
     ├── main.py          # Laptop Flask app (auth + proxy)
     ├── templates/
@@ -44,17 +44,34 @@ app/
 ## Setup
 
 ### 1. Raspberry Pi Zero W
+### Required files to change
+[.env.example](./app/rpi-zero/.env.example)
 
+[garage.service.example](./app/rpi-zero/garage.service.example)
 ```bash
 cd app/rpi-zero
-cp .env.example .env   # fill in SECRET_TOKEN and RELAY_PIN
-pip install flask python-dotenv RPi.GPIO
-python main.py
+# Make changes to .env file, and then create it
+cp .env.example .env
+pip install flask waitress python-dotenv RPi.GPIO # Probably already installed, but these are the required dependencies
+
+# Make changes to .service file, and then create it
+sudo cp garage.service.example /etc/systemd/system/garage.service
+
+# Reload systemd so it picks up the new unit
+sudo systemctl daemon-reload
+
+# Enable it to start on boot
+sudo systemctl enable garage
+
+# [Optional] start it, or reboot
+sudo systemctl start garage
 ```
 
-The Pi API listens on port `5000`. It is reachable on the local network as `rpi-zero.local` (mDNS).
+The Pi API listens on port `8000`. It is reachable on the local network as `rpi-zero.local` (mDNS).
 
 ### 2. Web App (Windows Laptop)
+### Required files to change
+[.env.example](./app/web/.env.example)
 
 ```bash
 cd app/web
@@ -90,16 +107,10 @@ The web app listens on `http://0.0.0.0:8080`.
 
 ### 3. Cloudflare Tunnel
 
-Install `cloudflared` and point a tunnel at `localhost:8080` or `localhost:6767` depending on how you deployed the app. See the [Cloudflare Tunnel docs](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/).
+Install `cloudflared` and point a tunnel at `localhost:8080` or `localhost:6868` depending on how you deployed the app. See the [Cloudflare Tunnel docs](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/).
 
 ## Authentication
 
 Users visit the site and enter the shared `SECRET_TOKEN`. On success a signed session cookie is issued. "Remember me" keeps the session alive for 7 days; unchecked sessions expire when the browser closes.
 
 Login attempts are rate-limited (10/min, 30/hr) to prevent brute-force. Changing `SECRET_TOKEN` in `.env` and restarting the web app invalidates all existing sessions.
-
-## Notes
-
-- The Pi should have a reserved DHCP lease (static LAN IP) so `rpi-zero.local` always resolves correctly.
-- Docker uses `network_mode: host` so the container can resolve mDNS hostnames via the host's Bonjour stack.
-- All toggle events are logged to `garage.log` in the web app directory.
