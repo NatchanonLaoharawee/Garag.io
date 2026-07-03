@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 ExecStart=/usr/local/bin/waitress-serve --host=0.0.0.0 --port=8000 main:app
-WorkingDirectory=/home/rpi-zero/Documents/Garag.io
+WorkingDirectory=/home/rpi-zero/Documents/Garag.io/app/rpi-zero
 Restart=always
 RestartSec=5
 User=rpi-zero
