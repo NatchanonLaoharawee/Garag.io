@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Garag.io</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f0f;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #f0f0f0;
+      padding: 1rem;
+      gap: 2rem;
+    }
+
+    header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .logo {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .logo span { color: #4ade80; }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      color: #888;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 999px;
+      padding: 0.3rem 0.75rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
+      transition: background 0.3s;
+    }
+
+    .status-dot.online  { background: #4ade80; box-shadow: 0 0 6px #4ade8088; }
+    .status-dot.offline { background: #ef4444; box-shadow: 0 0 6px #ef444488; }
+    .status-dot.checking { background: #888; animation: pulse 1.2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* Offline banner */
+    #error-banner {
+      display: none;
+      width: 100%;
+      max-width: 420px;
+      background: #1e0e0e;
+      border: 1px solid #7f1d1d;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    #error-banner.visible { display: block; }
+
+    #error-banner .banner-title {
+      color: #fca5a5;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    #error-banner .banner-detail { color: #f87171; }
+
+    /* Disabled button state */
+    .garage-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* Big garage button */
+    .garage-btn {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      background: radial-gradient(circle at 40% 35%, #2a2a2a, #111);
+      box-shadow:
+        0 0 0 2px #2a2a2a,
+        0 8px 40px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+      transition: transform 0.15s, box-shadow 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .garage-btn:hover {
+      transform: scale(1.04);
+      box-shadow:
+        0 0 0 2px #4ade80,
+        0 8px 48px rgba(74,222,128,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+
+    .garage-btn:active { transform: scale(0.97); }
+
+    .garage-btn.loading { pointer-events: none; opacity: 0.7; }
+
+    .garage-btn svg {
+      width: 72px;
+      height: 72px;
+      fill: #4ade80;
+      transition: fill 0.2s;
+    }
+
+    .garage-btn:hover svg { fill: #86efac; }
+
+    .hint {
+      font-size: 0.8rem;
+      color: #555;
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(4rem);
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    #toast.success { border-color: #4ade80; color: #4ade80; }
+    #toast.error   { border-color: #ef4444; color: #ef4444; }
+
+    footer {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+    }
+
+    .logout-btn {
+      background: none;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      color: #555;
+      font-size: 0.75rem;
+      padding: 0.4rem 0.75rem;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .logout-btn:hover { color: #aaa; border-color: #555; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">Garag<span>.io</span></div>
+    <div class="status-badge">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">Checking Pi…</span>
+    </div>
+  </header>
+
+  <div id="error-banner" role="alert">
+    <div class="banner-title" id="banner-title"></div>
+    <div class="banner-detail" id="banner-detail"></div>
+  </div>
+
+  <button class="garage-btn" id="toggle-btn" aria-label="Toggle garage door">
+    <!-- Garage door icon -->
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8"  y="10" width="48" height="6" rx="2"/>
+      <rect x="8"  y="20" width="48" height="6" rx="2"/>
+      <rect x="8"  y="30" width="48" height="6" rx="2"/>
+      <rect x="8"  y="40" width="48" height="6" rx="2"/>
+      <rect x="8"  y="50" width="48" height="6" rx="2"/>
+    </svg>
+  </button>
+
+  <p class="hint">Tap to toggle the garage door</p>
+
+  <div id="toast"></div>
+
+  <footer>
+    <form method="POST" action="/logout">
+      <button type="submit" class="logout-btn">Log out</button>
+    </form>
+  </footer>
+
+  <script>
+    const btn = document.getElementById('toggle-btn');
+    const dot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const toast = document.getElementById('toast');
+    let toastTimer;
+
+    const banner      = document.getElementById('error-banner');
+    const bannerTitle  = document.getElementById('banner-title');
+    const bannerDetail = document.getElementById('banner-detail');
+
+    function showToast(message, type, duration = 4000) {
+      clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.className = 'show ' + type;
+      toastTimer = setTimeout(() => { toast.className = ''; }, duration);
+    }
+
+    function setPiOnline() {
+      dot.className = 'status-dot online';
+      statusText.textContent = 'Pi online';
+      banner.classList.remove('visible');
+      btn.disabled = false;
+    }
+
+    function setPiOffline(reason, detail) {
+      dot.className = 'status-dot offline';
+      statusText.textContent = reason || 'Pi offline';
+      bannerTitle.textContent = reason || 'Pi offline';
+      bannerDetail.textContent = detail || '';
+      banner.classList.add('visible');
+      btn.disabled = true;
+    }
+
+    async function checkStatus() {
+      dot.className = 'status-dot checking';
+      statusText.textContent = 'Checking Pi…';
+      try {
+        const res  = await fetch('/api/status');
+        const data = await res.json();
+        if (data.online) {
+          setPiOnline();
+        } else {
+          setPiOffline(data.reason || 'Pi offline', data.detail);
+        }
+      } catch {
+        setPiOffline('Pi unreachable', 'Could not contact the web server. Check your network connection.');
+      }
+    }
+
+    btn.addEventListener('click', async () => {
+      btn.classList.add('loading');
+      try {
+        const res  = await fetch('/toggle', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          showToast('Garage toggled!', 'success');
+        } else {
+          // Show short toast + update banner with full diagnosis
+          showToast(data.message || 'Toggle failed', 'error', 6000);
+          if (data.detail) {
+            bannerTitle.textContent  = data.message || 'Toggle failed';
+            bannerDetail.textContent = data.detail;
+            banner.classList.add('visible');
+          }
+          // Refresh status dot to reflect current Pi state
+          checkStatus();
+        }
+      } catch {
+        showToast('Network error — could not reach the web server', 'error', 6000);
+      } finally {
+        btn.classList.remove('loading');
+      }
+    });
+
+    // Check Pi status on load, then every 30 seconds
+    checkStatus();
+    setInterval(checkStatus, 30000);
+  </script>
+</body>
+</html>

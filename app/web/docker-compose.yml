@@ -1,0 +1,21 @@
+services:
+  web-dev:
+    build:
+      context: .
+      target: development
+    ports:
+      - "6767:8080"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+
+  web-prod:
+    build:
+      context: .
+      target: production
+    ports:
+      - "6868:8080"
+    env_file:
+      - .env
+    restart: unless-stopped
